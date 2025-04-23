@@ -1,0 +1,23 @@
+# Inside .gitignore file
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Audio temp files
+*dl.audio
+*cnv.wav
+
+# Logs and temp
+*.log
+*.tmp
+
+# Editor/project files
+.vscode/
+.ipynb_checkpoints/
+
+# Database (if you don't want to version control it)
+*.db
+
+# --- START OF COMPLETE .gitignore ---
