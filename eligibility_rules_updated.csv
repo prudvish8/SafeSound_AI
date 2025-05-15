@@ -1,0 +1,33 @@
+rule_id,scheme_id,parameter,operator,value,description
+1,1,income,<=,200000,Income must be ≤ ₹2 lakh
+2,1,ownership,=,own_house,Applicant must own a house
+
+3,2,gender,=,female,Female applicant
+4,2,income,<=,100000,Annual family income ≤ ₹1 lakh
+5,2,age,>=,18,Min age 18
+6,2,age,<=,59,Max age 59
+
+7,3,occupation,=,farmer,Must be a farmer
+8,3,caste,=,BC,Belongs to BC caste
+
+9,4,occupation,=,unemployed,Applicant is unemployed
+24,4,is_employed,=,False,Must not be employed (Nirudyoga Bruthi)
+
+10,5,age,>=,60,Senior-citizen minimum age
+11,5,income,<=,120000,Annual income limit ≈ ₹1.2 lakh
+
+12,6,gender,=,female,Female traveller (APSRTC Free Bus)
+
+14,8,occupation,=,farmer,Farmer
+15,8,caste,=,BC,Reserved caste farmer (BC)
+
+16,9,income,<=,100000,Annual household income ≤ ₹1 lakh
+
+18,10,age,>=,21,Min age 21
+19,10,age,<=,37,Max age 37
+20,10,income,<=,200000,Family income ≤ ₹2 lakh
+25,10,is_student,=,True,Must be a current student (Vid yonnathi)
+
+21,11,income,<=,300000,Annual household income ≤ ₹3 lakh
+22,11,ownership,=,no_house,Must not own a pucca house
+23,11,age,>=,18,Head of household ≥ 18

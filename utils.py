@@ -7,8 +7,11 @@ MIN_MEANINGFUL_LENGTH = 2
 
 import unicodedata
 import sqlite3
+import logging
+import pandas as pd
+import os
 
-DB_FILE = "welfare_schemes.db"
+DB_FILE = os.getenv("DB_FILE", "welfare_schemes.db")
 
 # ... (rest of the code remains the same)
 
@@ -26,8 +29,8 @@ def telugu_to_number(text):
     }
     telugu_map = {normalize_nfc(k): v for k, v in telugu_map_raw.items()}
     # Verify problematic keys explicitly
-    if normalize_nfc("ముప్పై") not in telugu_map: print("FATAL DEBUG: ముప్పై not in map after normalization!")
-    if normalize_nfc("తొంభై") not in telugu_map: print("FATAL DEBUG: తొంభై not in map after normalization!")
+    if normalize_nfc("ముప్పై") not in telugu_map: logging.debug("FATAL DEBUG: ముప్పై not in map after normalization!")
+    if normalize_nfc("తొంభై") not in telugu_map: logging.debug("FATAL DEBUG: తొంభై not in map after normalization!")
 
 
     normalizer_map_raw = {
@@ -44,7 +47,7 @@ def telugu_to_number(text):
     multiplier_order = [normalize_nfc(k) for k in ["కోటి", "లక్ష", "వేలు", "వంద"]]
 
     # 1. Input Cleaning & Normalization
-    print(f"\n[telugu_to_number V8] Input: '{text}'")
+    logging.debug(f"\n[telugu_to_number V8] Input: '{text}'")
     cleaned_text_nfc = normalize_nfc(text.replace(",", "").replace("రూపాయలు", "").replace("సంవత్సరాలు", "").strip().lower())
     if not cleaned_text_nfc: return None # Return None for empty
     if cleaned_text_nfc.isdigit():
@@ -72,7 +75,7 @@ def telugu_to_number(text):
             normalized_words.append(cleaned)
 
 
-    print(f"Normalized words (NFC): {normalized_words}")
+    logging.debug(f"Normalized words (NFC): {normalized_words}")
     if not normalized_words: return None # Return None if no words left
 
     total_value = 0; words_to_process = normalized_words[:];
@@ -90,8 +93,8 @@ def telugu_to_number(text):
                  val += num
              else: # Word not in number map (might be leftover multiplier?)
                  if not (len(sequence)==1 and word in multipliers): # Only allow lone multiplier
-                     print(f"[ParseSimpleWarn] Ignoring '{word}' in {sequence}")
-        # print(f"  ParseSimple result: {val}") # Debug
+                     logging.debug(f"[ParseSimpleWarn] Ignoring '{word}' in {sequence}")
+        # logging.debug(f"  ParseSimple result: {val}") # Debug
         return val
 
     # 3. Process Multipliers (using CORRECTED helper)
@@ -105,7 +108,7 @@ def telugu_to_number(text):
                 parsed = parse_simple_sequence(coeffs); # Parse the coefficient words
                 coeff = parsed if parsed > 0 else 1; # Default to 1 if empty/failed parse
                 segment = coeff * mult_value; total_value += segment;
-                print(f"  Segment: {coeffs} '{mult_word}' -> {coeff}*{mult_value}={segment}. Total:{total_value}")
+                logging.debug(f"  Segment: {coeffs} '{mult_word}' -> {coeff}*{mult_value}={segment}. Total:{total_value}")
                 indices_to_remove.extend(coeff_idx); indices_to_remove.append(i)
             i += 1
         if indices_to_remove:
@@ -113,21 +116,21 @@ def telugu_to_number(text):
              for idx in unique:
                   if idx<len(temp): del temp[idx]
              words_to_process = temp
-             if processed: print(f"  Remain after '{mult_word}': {words_to_process}")
+             if processed: logging.debug(f"  Remain after '{mult_word}': {words_to_process}")
 
     # 4. Process Remainder (using CORRECTED helper)
-    if words_to_process: remaining=parse_simple_sequence(words_to_process); total_value+=remaining; print(f"  Remaining {words_to_process} -> {remaining}");
+    if words_to_process: remaining=parse_simple_sequence(words_to_process); total_value+=remaining; logging.debug(f"  Remaining {words_to_process} -> {remaining}");
 
     # 5. Final Return (Return None if result is 0 for non-zero input)
-    print(f"--> Final parsed number: {total_value}")
+    logging.debug(f"--> Final parsed number: {total_value}")
     is_zero = (len(normalized_words) == 1 and normalize_nfc("సున్నా") in normalized_words[0])
     if total_value == 0 and not is_zero:
         # Try digit fallback *only* if word parse failed AND it wasn't supposed to be 0
         try:
             digits="".join(filter(str.isdigit, text.replace(" ","")));
-            if digits: print("Fallback: Digit extraction."); return int(digits)
+            if digits: logging.debug("Fallback: Digit extraction."); return int(digits)
         except ValueError: pass
-        print("Warning: Resulted in 0 or parsing failed."); return None # Return None on failure
+        logging.debug("Warning: Resulted in 0 or parsing failed."); return None # Return None on failure
     else:
         return total_value # Return the calculated value (can be 0 if input was 'సున్నా')
 
@@ -135,15 +138,19 @@ from typing import Optional
 
 # --- Helper: Text Filtering (Refactored & Type-Annotated) ---
 def filter_text(raw_text: str, lang: str = "te") -> Optional[str]:
-    """Filters garbage, short, or empty text, allowing essential short answers."""
     if not raw_text:
-        print("[Filter] Empty input.")
+        logging.debug("[Filter] Empty input.")
         return None
 
     check = raw_text.lower().strip()
     if not check:
-        print("[Filter] Empty after clean.")
+        logging.debug("[Filter] Empty after clean.")
         return None
+
+    # ≪ NEW: immediately accept pure digits ≫
+    if check.isdigit():
+        logging.debug(f"[Filter] Kept digit input: '{raw_text}'")
+        return raw_text
 
     essential_short_te = ["ఓసి", "బిసి", "ఎస్సీ", "ఎస్టీ", "మగ", "ఆడ", "అవును", "కాదు", "లేదు", "ఉంది"]
     essential_short_en = ["hi", "hello","oc", "bc", "sc", "st", "yes", "no", "male", "female"]
@@ -153,22 +160,22 @@ def filter_text(raw_text: str, lang: str = "te") -> Optional[str]:
     s_list = SHORT_SOUNDS_TE if lang == 'te' else SHORT_SOUNDS_EN
 
     if check in essentials:
-        print(f"[Filter] Kept essential short answer: '{raw_text}'")
+        logging.debug(f"[Filter] Kept essential short answer: '{raw_text}'")
         return raw_text
 
     if check in g_list:
-        print(f"[Filter] Filtered exact garbage: '{raw_text}'")
+        logging.debug(f"[Filter] Filtered exact garbage: '{raw_text}'")
         return None
 
     if check in s_list:
-        print(f"[Filter] Filtered short sound: '{raw_text}'")
+        logging.debug(f"[Filter] Filtered short sound: '{raw_text}'")
         return None
 
     if len(raw_text) < MIN_MEANINGFUL_LENGTH:
-        print(f"[Filter] Filtered too short (and not essential): '{raw_text}'")
+        logging.debug(f"[Filter] Filtered too short (and not essential): '{raw_text}'")
         return None
 
-    print(f"[Filter] Input passed filtering: '{raw_text}'")
+    logging.debug(f"[Filter] Input passed filtering: '{raw_text}'")
     return raw_text
 # --- End Refactored Filter ---
 
@@ -191,10 +198,10 @@ def extract_gender(text, language="te"):
             return "male"
         if any(keyword in text_lower for keyword in female_keywords_te):
             return "female"
-    if any(keyword in text_lower for keyword in male_keywords_en):
-        return "male"
     if any(keyword in text_lower for keyword in female_keywords_en):
         return "female"
+    if any(keyword in text_lower for keyword in male_keywords_en):
+        return "male"
     return None
 
 
@@ -387,30 +394,207 @@ def get_db_connection():
         conn = sqlite3.connect(DB_FILE)
         return conn
     except sqlite3.Error as e:
-        print(f"Database connection error: {e}")
+        logging.debug(f"Database connection error: {e}")
         return None
 
 
-def extract_caste(text, language="te"):
-    """
-    Extract caste category (OC, BC, SC, ST) from text.
-    Args:
-        text (str): The text to extract caste from
-        language (str): The language of the text ('te' for Telugu, 'en' for English)
-    Returns:
-        str: Normalized caste category ('oc', 'bc', 'sc', 'st') or None if not determined
-    """
-    text_lower = text.lower().strip()
-    caste_map = {
-        'oc': ['oc', 'ఓసి', 'ఓసీ', 'general', 'forward caste', 'open category'],
-        'bc': ['bc', 'బిసి', 'బీసీ', 'backward class', 'other backward class'],
-        'sc': ['sc', 'ఎస్సీ', 'scheduled caste', 'దళిత', 'హరిజన'],
-        'st': ['st', 'ఎస్టీ', 'scheduled tribe', 'గిరిజన', 'tribal', 'adivasi', 'ఆదివాసి']
-    }
-    for category, keywords in caste_map.items():
-        if any(keyword in text_lower for keyword in keywords):
-            return category
-    print(f"Could not extract caste category from: '{text}'")
+def extract_caste(text):
+    t = text.lower().strip()
+    if t in ["sc", "st", "bc", "oc"]:
+        return t.upper()
     return None
 
+def extract_ownership(text: str, lang: str = "en") -> str | None:
+    """Return 'own_house' or 'no_house' if we can tell; otherwise None."""
+    t = text.lower().strip()
+    yes_set = {"yes", "y", "own", "ownhouse", "have", "చ yes", "ఉంది", "ఆవున్", "ఆవును", "ఉన్నాం", "ఉన్నది", "ఉన్నాయి"}
+    no_set  = {"no", "n", "rent", "rented", "nohouse", "లేదు", "వద్దు", "లేదని"}
+    if t in yes_set:
+        return "own_house"
+    if t in no_set:
+        return "no_house"
+    return None
+
+def profile_summary_en(profile):
+    """Return a nicely formatted English summary."""
+    parts = [
+        f"Age: {profile.get('age', '-')}",
+        f"Gender: {profile.get('gender', '-')}",
+        f"Occupation: {profile.get('occupation', '-')}",
+        f"Income: {profile.get('income', '-')}",
+        f"Caste: {profile.get('caste', '-')}",
+        f"Ownership: {profile.get('ownership', '-')}",
+    ]
+    if 'kids_count' in profile:
+        parts.append(f"School-going kids: {profile['kids_count']}")
+    return "\n".join(parts)
+
+
+def profile_summary_te(profile):
+    """Telugu version (add సెపరేటర్ only when kids_count exists)."""
+    parts = [
+        f"వయస్సు: {profile.get('age', '-')}",
+        f"లింగం: {profile.get('gender', '-')}",
+        f"వృత్తి: {profile.get('occupation', '-')}",
+        f"ఆదాయం: {profile.get('income', '-')}",
+        f"కులం: {profile.get('caste', '-')}",
+        f"ఇల్లు/భూమి: {profile.get('ownership', '-')}",
+    ]
+    if 'kids_count' in profile:
+        parts.append(f"పాఠశాల పిల్లలు: {profile['kids_count']}")
+    return "\n".join(parts)
+
+def extract_student_choice(text, language="te"):
+    """Parses user input to determine choice between Upskilling (1) or Jobs (2)."""
+    if not text:
+        logging.debug("--- DEBUG extract_student_choice: Input is None or empty")
+        return None
+    text_lower = text.lower().strip()
+    logging.debug(f"--- DEBUG extract_student_choice: Input='{text_lower}', Lang='{language}'") # Debug Input
+
+    upskill_kw_te = ["ఒకటి", "నైపుణ్యం", "శిక్షణ", "స్కిల్"]
+    upskill_kw_en = ["1", "one", "upskilling", "skill", "training"]
+    jobs_kw_te = ["రెండు", "ఉద్యోగం", "ఉద్యోగాలు", "జాబ్", "జాబ్స్", "ఇంటర్న్షిప్"]
+    jobs_kw_en = ["2", "two", "job", "jobs", "drive", "mela", "internship"]
+
+    result = None # Default
+    # Telugu keywords
+    if language == 'te':
+        if any(kw in text_lower for kw in upskill_kw_te):
+            result = 1
+        elif any(kw in text_lower for kw in jobs_kw_te):
+            result = 2
+    # English/digits (regardless of lang)
+    if result is None:
+        if any(kw in text_lower for kw in upskill_kw_en):
+            result = 1
+        elif any(kw in text_lower for kw in jobs_kw_en):
+            result = 2
+    logging.debug(f"--- DEBUG extract_student_choice: Returning: {result} (Type: {type(result)})") # Debug Return
+    return result
+
 # ... (rest of the code remains the same)
+
+from typing import Tuple, List, Dict
+import sqlite3, os
+
+MONTHS_IN_YEAR = 12
+
+def _dbg(label: str, result: bool):
+    from flask import current_app
+    tick = "✅" if result else "❌"
+    current_app.logger.info(f"{label:40} {tick}")
+    return result
+
+def rule_thalliki(profile):
+    """Return True if the household has at least one child in school and income ≤ 120 000."""
+    has_child = profile.get("kids_count", 0) >= 1
+    low_income = profile.get("income", 0) <= 120000
+    return _dbg("kids_count >= 1", has_child) and _dbg("income <= 120000", low_income)
+
+def rule_farmer(profile):
+    return _dbg("occupation = farmer", profile.get("occupation") == "farmer")
+
+def rule_farmer_bc(profile):
+    return rule_farmer(profile) and _dbg("caste = bc", profile.get("caste") == "bc")
+
+def match_schemes(profile: dict) -> list[dict]:
+    """
+    Return just the schemes the person CAN apply for.
+    Each item must have *name* and *blurb* keys.
+    """
+    all_schemes = [
+        {"name": "Free Solar Rooftop Scheme",
+         "blurb": "Free rooftop solar panels for low-income households",
+         "eligible": _dbg("income <= 10000", profile.get("income", 0) <= 10000)},
+        {"name": "Annadata Sukhibhava",
+         "blurb": "Rs.20,000 assistance to farmers in instalments",
+         "eligible": rule_farmer(profile)},
+        {"name": "Free Power Supply (9h)",
+         "blurb": "Free daytime electricity for BC farmers",
+         "eligible": rule_farmer_bc(profile)},
+        {"name": "Thalliki Vandanam",
+         "blurb": "₹15 000 per school-age child from poor households. *requires children info*",
+         "eligible": rule_thalliki(profile)},
+    ]
+    return [s for s in all_schemes if s["eligible"]]
+
+from typing import Tuple, List, Dict
+import sqlite3, os
+
+DB_FILE = os.getenv("DB_FILE", "welfare_schemes.db")
+
+# --- Robust extract_number: Telugu/English/voice/digits ---
+try:
+    from indic_transliteration import sanscript
+    from indic_transliteration.sanscript import transliterate, SCHEMES
+except ImportError:
+    transliterate = lambda x, _1, _2: x
+    SCHEMES = {'telugu': None, 'itrans': None}
+from word2number import w2n
+
+def extract_number(text: str, lang: str = "en") -> int:
+    """
+    Extracts an integer from Telugu or English text, supporting digits, number words, and transliterated forms.
+    Returns int or None.
+    """
+    if not text:
+        return None
+    txt = text.strip().lower()
+    # 1. Try digit parse
+    try:
+        return int(txt)
+    except Exception:
+        pass
+    # 2. Try Telugu transliteration → ITRANS
+    try:
+        itrans = transliterate(txt, SCHEMES['telugu'], SCHEMES['itrans'])
+        # Remove spaces, normalize
+        itrans = itrans.replace(' ', '')
+        # Try parsing as English number word
+        return w2n.word_to_num(itrans)
+    except Exception:
+        pass
+    # 3. Try parsing as English number word directly
+    try:
+        return w2n.word_to_num(txt)
+    except Exception:
+        pass
+    return None
+
+def get_required_documents(scheme_name: str) -> list[str]:
+    """
+    Return a plain-English list of documents needed for the given scheme_name.
+    Schema expected:
+      documents_required (scheme_id TEXT, doc_name TEXT, is_mandatory INTEGER)
+    """
+    with get_db_connection() as conn:
+        if conn is None:
+            logging.error(f"Could not connect to database for scheme {scheme_name}")
+            return ["Error: Could not connect to database."]
+        try:
+            df = pd.read_sql(
+                '''SELECT doc_name, is_mandatory
+                   FROM documents_required
+                   WHERE scheme_id = (
+                       SELECT scheme_id
+                       FROM schemes
+                       WHERE name = ?)''',
+                conn,
+                params=[scheme_name],
+            )
+            if df.empty:
+                logging.warning(f"No documents found for scheme {scheme_name}")
+                return ["No documents listed for this scheme."]
+            result = []
+            for _, row in df.iterrows():
+                doc = row['doc_name']
+                mandatory = row['is_mandatory']
+                if mandatory in (1, '1', True, 'True', 'true'):
+                    result.append(f"{doc} (Mandatory)")
+                else:
+                    result.append(f"{doc} (Optional)")
+            return result
+        except Exception as e:
+            logging.error(f"Error fetching documents for {scheme_name}: {e}")
+            return ["Error: Unable to fetch required documents."]

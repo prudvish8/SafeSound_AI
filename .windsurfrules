@@ -1,0 +1,30 @@
+# Local Windsurf Rules for the AP Welfare Scheme WhatsApp Chatbot Prototype
+
+# --- Project Context & Focus ---
+1.  This project is a bilingual (Telugu/English) WhatsApp chatbot backend built using Python and Flask.
+2.  The primary goal is a prototype to demonstrate checking eligibility for Andhra Pradesh government welfare schemes via voice notes.
+3.  Core application logic resides mainly in `app.py` (Flask routes, state machine) and `utils.py` (parsing functions, helpers).
+4.  Data is stored in CSV files (for initial setup) and an SQLite database (`welfare_schemes.db`).
+5.  Key external services/libraries involved are Twilio (WhatsApp API), Whisper (STT via Transformers), gTTS (TTS), Pydub (audio conversion), and potentially Requests.
+
+# --- Code Modification Guidelines ---
+6.  Focus code generation, modification, and debugging efforts primarily on `app.py` and `utils.py`.
+7.  Do NOT modify configuration files like `.env`, `.gitignore`, or `requirements.txt` unless specifically instructed to add a dependency or configuration setting.
+8.  Do NOT modify files inside the `venv/` directory.
+9.  Do NOT directly modify the raw data CSV files or the `welfare_schemes.db` file unless the task is explicitly about database setup or data loading (e.g., running `setup_database`).
+
+# --- Security & Safety ---
+10. NEVER display or include API keys, authentication tokens, or other sensitive credentials found in `.env` files or potentially embedded in code within your responses or generated code examples. Refer to them conceptually (e.g., "your Twilio Auth Token").
+11. Do NOT execute terminal commands that modify/delete files (`rm`, `mv`, `cp`), change system settings, or require `sudo` unless explicitly and clearly confirmed by the user for a specific, understood purpose.
+12. Safe terminal commands for demonstration or setup (like `ls`, `pwd`, `pip install -r requirements.txt`, `python app.py`, `git status`, `git checkout`, `git branch`) are generally acceptable when relevant to the task.
+
+# --- Functionality & Assistance ---
+13. Assist with debugging Python tracebacks, analyzing Flask logs, and identifying issues in the state machine logic within `app.py`.
+14. Help write or refine Python functions in `utils.py` for parsing Telugu/English input (like numbers, gender, occupation, yes/no) based on provided examples or requirements.
+15. Provide code examples using the `twilio-python` library for sending text or media (audio) messages via WhatsApp, assuming necessary credentials are handled securely via environment variables.
+16. Help implement or refine the state management logic using the global `conversation_state` dictionary in `app.py`.
+17. Understand that the primary interaction mode is intended to be voice notes via WhatsApp, requiring STT before processing and potentially TTS for replies.
+
+# --- General ---
+18. Prioritize Python for all code examples.
+19. If instructions are unclear or ambiguous, ask for clarification before proceeding with potentially destructive or complex actions.

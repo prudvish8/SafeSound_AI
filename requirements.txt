@@ -49,3 +49,5 @@ urllib3==2.4.0
 webrtcvad==2.0.10
 Werkzeug==3.1.3
 yarl==1.19.0
+indic-transliteration
+word2number

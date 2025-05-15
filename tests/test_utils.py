@@ -1,33 +1,33 @@
-import unittest
-from utils import filter_text
+import pytest
+from utils import (
+    filter_text, telugu_to_number, extract_gender, extract_yes_no,
+    extract_occupation, extract_student_choice
+)
 
-class TestFilterText(unittest.TestCase):
-    def test_empty_input(self):
-        self.assertIsNone(filter_text("", "te"))
-        self.assertIsNone(filter_text("   ", "en"))
+@pytest.mark.parametrize("raw,lang,out", [
+    ("blah blah", "en", None),
+    ("హ్మ్",      "te", None),
+    ("yes",       "en", "yes"),
+])
+def test_filter_text(raw, lang, out):
+    assert filter_text(raw, lang) == out
 
-    def test_essential_short_answers(self):
-        self.assertEqual(filter_text("మగ", "te"), "మగ")
-        self.assertEqual(filter_text("ఆడ", "te"), "ఆడ")
-        self.assertEqual(filter_text("yes", "en"), "yes")
-        self.assertEqual(filter_text("no", "en"), "no")
-        self.assertEqual(filter_text("oc", "en"), "oc")
+@pytest.mark.parametrize("txt,val", [
+    ("ఒకటి", 1),
+    ("ముప్పై ఆరు", 36),
+    ("వంద", 100),
+])
+def test_telugu_to_number(txt, val):
+    assert telugu_to_number(txt) == val
 
-    def test_garbage(self):
-        self.assertIsNone(filter_text("asdfasdf", "en"))
-        self.assertIsNone(filter_text("బ్లా బ్లా", "te"))
+def test_extracts():
+    assert extract_gender("Female teacher", "en") == "female"
+    assert extract_yes_no("అవును", "te") is True
+    assert extract_occupation("రైతు", "te") == "farmer"
+    assert extract_student_choice("job", "en") == 2
 
-    def test_short_sound(self):
-        self.assertIsNone(filter_text("hm", "en"))
-        self.assertIsNone(filter_text("హ్మ్", "te"))
-
-    def test_too_short(self):
-        self.assertIsNone(filter_text("a", "en"))
-        self.assertIsNone(filter_text("ఎ", "te"))
-
-    def test_valid_long_input(self):
-        self.assertEqual(filter_text("This is valid.", "en"), "This is valid.")
-        self.assertEqual(filter_text("ఇది సరైన వాక్యం.", "te"), "ఇది సరైన వాక్యం.")
-
-if __name__ == "__main__":
-    unittest.main()
+def test_telugu_to_number_edge_cases():
+    assert telugu_to_number("సున్నా") == 0
+    assert telugu_to_number("పది")   == 10
+    assert telugu_to_number("ఇరవై") == 20
+    assert telugu_to_number("ముప్పై")== 30

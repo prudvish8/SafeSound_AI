@@ -21,3 +21,9 @@ __pycache__/
 *.db
 
 # --- START OF COMPLETE .gitignore ---
+
+# Audio files
+*.mp3
+
+# System files
+.DS_Store

@@ -1,0 +1,11 @@
+scheme_id,name,description,department,benefit_type,amount,application_url,contact_info,state,language,active_status,last_updated
+1,Free Solar Rooftop Scheme,Free rooftop solar panels for low-income households,Energy,Subsidy,Up to 3kW system,https://solarrooftop.gov.in,1800-xxx-xxxx,Andhra Pradesh,English,True,2024-11-15
+2,Aadabidda Nidhi,"Financial assistance of Rs.1,500 per month to economically weaker women aged 18‑59.",Women & Child Welfare,Cash Transfer,"Rs.1,500/month",,,Andhra Pradesh,Telugu,True,2025-04-28
+3,Annadata Sukhibhava,"Rs.20,000 assistance to farmers in installments; seeds & fertiliser support.",Agriculture,Cash + In‑kind,"Rs.20,000",,,Andhra Pradesh,Telugu,True,2025-04-28
+4,Nirudyoga Bruthi,"Allowance up to Rs.3,000 for unemployed youth.",Labour & Employment,Cash Transfer,"Rs.3,000/month",,,Andhra Pradesh,Telugu,True,2025-04-28
+5,NTR Bharosa Pension,"Monthly pension up to Rs.4,000 for elderly, widows, disabled; Rs.15,000 lump sum for disabled.",Social Welfare,Pension,"Rs.4,000/month",,,Andhra Pradesh,Telugu,True,2025-04-28
+6,APSRTC Free Bus Travel,Free bus travel for all women across Andhra Pradesh.,Transport,In‑kind,100% bus fare,,,Andhra Pradesh,Telugu,True,2025-04-28
+8,Free Power Supply (9h),Free or discounted 9‑hour daytime electricity for BC farmers.,Energy,Subsidy,Free 9h/day,,,Andhra Pradesh,Telugu,True,2025-04-28
+9,Thalliki Vandanam,"Rs.15,000 support per school‑age child from poor households.",Education,Cash Transfer,"Rs.15,000/year",,,Andhra Pradesh,Telugu,True,2025-04-28
+10,NTR Vidyonnathi,"Rs.10,000 assistance for books, lodging for higher‑education students.",Education,Cash Transfer,"Rs.10,000",,,Andhra Pradesh,Telugu,True,2025-04-28
+11,NTR TIDCO Housing Scheme,"Subsidised flats (1BHK / 2BHK) for low- and middle-income families who do not own a pucca house.",Housing & Urban Development,Subsidy,"Subsidised price; 30–60 m² units",https://housing.ap.gov.in,toll-free 1800-425-8585,Andhra Pradesh,Telugu,True,2025-04-28
