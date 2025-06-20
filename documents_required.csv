@@ -1,0 +1,34 @@
+doc_id,scheme_id,doc_name,is_mandatory
+1,1,Aadhaar Card,True
+2,1,Proof of Income,True
+3,1,Proof of House Ownership,True
+4,1,Electricity Bill,True
+5,2,Aadhaar Card,True
+6,2,Proof of Income,True
+7,2,Age Proof,True
+8,3,Aadhaar Card,True
+9,3,Farmer Certificate/Proof,True
+10,3,Caste Certificate,True
+11,4,Aadhaar Card,True
+12,4,Unemployment Proof/Registration,True
+13,5,Aadhaar Card,True
+14,5,Proof of Income,True
+15,5,Age Proof,True
+16,6,Aadhaar Card,True
+17,6,Residence Proof,True
+18,6,Gender Certificate,False
+19,8,Aadhaar Card,True
+20,8,Farmer Certificate/Proof,True
+21,8,Caste Certificate,True
+22,8,Electricity Connection Details,True
+23,9,Aadhaar Card,True
+24,9,Proof of Income,True
+25,9,School ID/Enrollment Proof,True
+26,10,Aadhaar Card,True
+27,10,Degree Certificate,True
+28,10,Proof of Income,True
+29,10,Age Proof,True
+30,11,Aadhaar Card,True
+31,11,Proof of Income,True
+32,11,No House Ownership Affidavit,True
+33,11,Residence Proof,True
