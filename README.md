@@ -14,6 +14,25 @@ A prototype backend for a WhatsApp chatbot that supports Telugu and English, par
 
 ---
 
+## Logging
+
+The project uses a centralized logging system configured in `logging_config.py` that provides structured, production-ready logging across all modules. All `print()` statements have been replaced with appropriate logging calls that include:
+
+- **Structured Format:** `timestamp - module - level - message`
+- **Multiple Log Levels:** INFO, WARNING, ERROR, EXCEPTION
+- **Automatic Stack Traces:** Full exception details for debugging
+- **Configurable Output:** Console and file logging support
+- **Module Identification:** Clear source identification in logs
+
+Example log output:
+```
+2025-06-27 15:08:05,259 - app - INFO - Flask app logger configured.
+2025-06-27 15:08:05,259 - app - INFO - Twilio client initialized successfully.
+2025-06-27 15:08:05,259 - nlu - INFO - Sending text to Gemini for NLU extraction.
+```
+
+---
+
 ## Setup
 1. **Clone the Repo:**
    ```bash
@@ -48,8 +67,12 @@ python app.py
 whatsapp_chatbot_backend/
 ├── app.py                  # Main Flask app and webhook
 ├── utils.py                # Parsing, extraction, and helper functions
-├── telugu1_protype_sql.py  # Prototype/experimental logic
-├── requirements.txt        # Python dependencies
+├── nlu.py                  # Natural language understanding with Google Gemini
+├── logging_config.py       # Centralized logging configuration
+├── session_manager.py      # Database-backed session management
+├── requirements.txt        # Python dependencies (generated from requirements.in)
+├── requirements.in         # Direct dependencies for pip-tools
+├── tests/                  # Comprehensive test suite
 ├── .env                    # Environment variables (not committed)
 └── README.md               # This file
 ```
@@ -61,6 +84,8 @@ whatsapp_chatbot_backend/
 - **Type-Safe:** Type hints and docstrings throughout.
 - **Robust:** Handles edge cases and logs errors clearly.
 - **Extensible:** Easy to add new states, languages, or parsing logic.
+- **Secure:** Twilio signature validation and environment-based configuration.
+- **Tested:** Comprehensive test coverage with mocked external dependencies.
 
 ---
 

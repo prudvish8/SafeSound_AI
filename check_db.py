@@ -1,23 +1,38 @@
-# --- Contents of check_db.py ---
+#!/usr/bin/env python3
+"""
+Check database schema and structure.
+"""
+
 import sqlite3
+from logging_config import get_logger
 
-DB_FILE = "welfare_schemes.db" # Make sure this is your DB file name
+logger = get_logger(__name__)
 
-print(f"--- Checking schema for {DB_FILE} ---")
-try:
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
+DB_FILE = "welfare_schemes.db"
 
-    print("\n[INFO] Schema for 'schemes' table:")
-    cursor.execute("PRAGMA table_info(schemes);")
-    columns = cursor.fetchall()
-    
-    if not columns:
-        print("Could not find a table named 'schemes'.")
-    else:
-        for col in columns:
-            print(f"  Column Name: {col[1]}, Type: {col[2]}")
+def check_schema():
+    """Check the schema of the database tables."""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        logger.info(f"--- Checking schema for {DB_FILE} ---")
+        
+        # Check schemes table
+        cursor.execute("PRAGMA table_info(schemes)")
+        columns = cursor.fetchall()
+        
+        if columns:
+            logger.info("\n[INFO] Schema for 'schemes' table:")
+            for col in columns:
+                logger.info(f"  Column Name: {col[1]}, Type: {col[2]}")
+        else:
+            logger.warning("Could not find a table named 'schemes'.")
+            
+        conn.close()
+        
+    except Exception as e:
+        logger.exception("An error occurred while checking schema")
 
-    conn.close()
-except Exception as e:
-    print(f"\n[ERROR] An error occurred: {e}")
+if __name__ == "__main__":
+    check_schema()

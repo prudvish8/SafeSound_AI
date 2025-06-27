@@ -1,48 +1,74 @@
-# --- Contents of whisper_app.py ---
-import torch
-from transformers import pipeline
-from flask import Flask, request, jsonify
-import tempfile
+#!/usr/bin/env python3
+"""
+Whisper transcription service for the WhatsApp chatbot.
+"""
+
 import os
-import logging
+import tempfile
+import whisper
+from logging_config import get_logger
 
-app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
+logger = get_logger(__name__)
 
-# Load the model once when the server starts
-logging.info("Loading Whisper model for transcription service...")
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
-WHISPER_MODEL = pipeline(
-    "automatic-speech-recognition",
-    model="openai/whisper-large-v3",
-    chunk_length_s=30,
-    device=device,
-)
-logging.info("Whisper model loaded.")
+# Load Whisper model
+try:
+    logger.info("Loading Whisper model for transcription service...")
+    model = whisper.load_model("base")
+    logger.info("Whisper model loaded.")
+except Exception as e:
+    logger.exception("Failed to load Whisper model")
+    model = None
 
-@app.route('/transcribe', methods=['POST'])
-def transcribe_audio():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part in the request"}), 400
+def transcribe_audio_file(audio_file_path: str) -> str:
+    """
+    Transcribe an audio file using Whisper.
     
-    file = request.files['file']
+    Args:
+        audio_file_path (str): Path to the audio file
+        
+    Returns:
+        str: Transcribed text or empty string if transcription fails
+    """
+    if model is None:
+        logger.error("Whisper model not loaded")
+        return ""
     
-    with tempfile.NamedTemporaryFile(delete=False) as temp_audio_file:
-        file.save(temp_audio_file.name)
-        temp_filename = temp_audio_file.name
-
     try:
-        logging.info(f"Transcribing file: {temp_filename}")
-        result = WHISPER_MODEL(temp_filename)
-        logging.info(f"Transcription result: {result['text']}")
-        return jsonify(result)
+        logger.info(f"Transcribing file: {audio_file_path}")
+        result = model.transcribe(audio_file_path)
+        transcription = result["text"].strip()
+        logger.info(f"Transcription result: {transcription}")
+        return transcription
     except Exception as e:
-        logging.error(f"Error during transcription: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
+        logger.exception("Error during transcription")
+        return ""
 
-if __name__ == '__main__':
-    # Run on a different port, e.g., 9000
-    app.run(host='0.0.0.0', port=9000)
+def transcribe_audio_bytes(audio_bytes: bytes, file_extension: str = ".wav") -> str:
+    """
+    Transcribe audio bytes using Whisper.
+    
+    Args:
+        audio_bytes (bytes): Audio data as bytes
+        file_extension (str): File extension for the temporary file
+        
+    Returns:
+        str: Transcribed text or empty string if transcription fails
+    """
+    if model is None:
+        logger.error("Whisper model not loaded")
+        return ""
+    
+    try:
+        with tempfile.NamedTemporaryFile(suffix=file_extension, delete=False) as temp_file:
+            temp_file.write(audio_bytes)
+            temp_filename = temp_file.name
+        
+        transcription = transcribe_audio_file(temp_filename)
+        
+        # Clean up temporary file
+        os.unlink(temp_filename)
+        
+        return transcription
+    except Exception as e:
+        logger.exception("Error during audio bytes transcription")
+        return ""

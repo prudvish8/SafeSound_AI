@@ -1,0 +1,39 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Rules for SafeSound AI Chatbot
+
+## 1. Project Overview & Goal
+This project is a Python Flask web application that serves as the backend for a WhatsApp chatbot.
+- **Core Function:** The chatbot allows users to send voice notes in Telugu or English to verify their eligibility for government welfare schemes.
+- **User Interaction:** The flow is: User sends voice note -> App transcribes speech to text (STT) -> App uses an LLM for natural language understanding (NLU) to determine intent -> App queries a local database for eligibility rules -> App generates a text response -> App converts text to speech (TTS) -> App sends the audio response back to the user on WhatsApp.
+- **Key Objective:** Achieve low-latency, real-time responses. The user experience must be fast and frictionless.
+
+## 2. Core Technologies
+- **Web Framework:** Flask
+- **WhatsApp Integration:** Twilio API
+- **Speech-to-Text (STT):** OpenAI Whisper
+- **Natural Language Understanding (NLU):** An LLM, likely Google Gemini or OpenAI GPT series.
+- **Database:** SQLite (via `.db` files). The primary database is `welfare_schemes.db`.
+- **State Management:** Currently uses `user_states.json`. A key goal is to move this to an in-memory cache or Redis.
+
+## 3. Architecture & File Structure
+- `app.py`: The main Flask application file. Contains the webhook endpoint for Twilio. This is the entry point.
+- `utils.py`: Contains helper functions, especially for audio processing and interacting with external APIs.
+- `nlu.py`: Handles all interactions with the Large Language Model for intent recognition and response generation.
+- `welfare_schemes.db`: The primary SQLite database containing scheme information.
+- `requirements.txt`: Lists all Python dependencies.
+
+## 4. Coding Conventions & Best Practices
+- **Performance First:** When generating or refactoring code, prioritize performance. **Avoid writing temporary files to disk.** Use in-memory objects (`io.BytesIO`) for all audio processing.
+- **Type Hinting:** All new functions must include Python type hints for all arguments and return values.
+- **Docstrings:** All new functions should have a brief, Google-style docstring explaining what it does.
+- **Configuration:** Use `settings.py` for non-sensitive configuration. Use environment variables (loaded from a `.env` file) for all secrets and API keys. Never hardcode secrets.
+## 5. Testing & Quality Assurance
+- **Test-Driven Mentality:** For any new feature or non-trivial function, our process is to first outline a test plan, then write the code, then write the tests.
+- **Framework:** All tests must be written using the `pytest` framework.
+- **Test Coverage:** Tests should cover not just the "happy path" (successful execution), but also edge cases, expected failures, and invalid inputs.
+- **Test Generation:** When asked to write tests for a function, generate a new file in the `tests/` directory (e.g., `tests/test_utils.py`) and create comprehensive `pytest` functions.
+- **No Regressions:** Before merging any significant change, all existing tests must pass.

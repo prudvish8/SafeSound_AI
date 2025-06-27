@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# My Personal Developer Preferences
+
+## 1. My Coding Philosophy
+- **Clarity and Simplicity:** Write code that is easy to read and understand. Prefer simple, direct solutions over overly complex or "clever" ones.
+- **Explain the "Why":** Comments should explain *why* a piece of code exists, not *what* it does. The code itself should be self-explanatory.
+- **Robust Error Handling:** Always wrap external API calls and file I/O in `try...except` blocks. Log errors clearly and provide sensible fallback behavior.
+
+## 2. Preferred Tools & Libraries
+- **Dependency Management:** I use `pip-tools` to compile my `requirements.txt` from a `requirements.in` file. When adding a new dependency, suggest adding it to `requirements.in` first.
+- **Testing Framework:** My preferred testing framework is `pytest`. When generating tests, create them in a `tests/` directory and use `pytest` conventions.
+- **Deployment Target:** My primary deployment target is **Google Cloud Run**. Generate code that is compatible with a serverless, containerized environment (e.g., read configuration from environment variables, do not rely on a local file system for state).
+
+## 3. Best Practices to Enforce
+- **Security First:** **Never, ever write secrets, API keys, or tokens directly in the source code.** Always instruct me to use environment variables or a secret manager like Google Secret Manager.
+- **Modularity:** Encourage breaking down large functions into smaller, single-purpose helper functions. Place these helpers in `utils.py` or other relevant modules.
+- **Modern Python:** Use modern Python features where appropriate (e.g., f-strings for formatting, dataclasses for simple data structures).

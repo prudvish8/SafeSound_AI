@@ -3,9 +3,12 @@
 import sqlite3
 import logging
 import pandas as pd
+import json
+from typing import Any, Dict
+from logging_config import get_logger
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Get logger for this module
+logger = get_logger(__name__)
 
 # ==============================================================================
 # ========================== ESSENTIAL FUNCTIONS TO KEEP =======================
@@ -22,7 +25,7 @@ def get_db_connection():
         conn.row_factory = sqlite3.Row
         return conn
     except sqlite3.Error as e:
-        logging.error(f"Database connection error: {e}")
+        logger.exception("Database connection error")
         return None
 
 def profile_summary_te(profile: dict) -> str:
@@ -94,7 +97,7 @@ def match_schemes(profile: dict) -> pd.DataFrame:
         # Income Filtering (Converts monthly to annual before comparing)
         if profile.get('income'):
             annual_income = profile['income'] * 12
-            logging.info(f"Calculated annual income: {annual_income} for matching.")
+            logger.info(f"Calculated annual income: {annual_income} for matching.")
             query += " AND (? <= max_income OR max_income IS NULL)"
             params.append(annual_income)
         
@@ -119,7 +122,7 @@ def match_schemes(profile: dict) -> pd.DataFrame:
         return df
 
     except Exception as e:
-        logging.error(f"Error during scheme matching: {e}")
+        logger.exception("Error during scheme matching")
         return pd.DataFrame()
     finally:
         if conn:
@@ -141,7 +144,7 @@ def get_scheme_details_by_name(scheme_name: str) -> dict | None:
         details = cursor.fetchone() # Use fetchone since we expect a single match
         return dict(details) if details else None
     except Exception as e:
-        logging.error(f"Error fetching details for {scheme_name}: {e}")
+        logger.exception(f"Error fetching details for {scheme_name}")
         return None
     finally:
         if conn:
@@ -161,11 +164,81 @@ def get_required_documents(scheme_name: str) -> list:
         documents = [row['document_name'] for row in cursor.fetchall()]
         return documents
     except Exception as e:
-        logging.error(f"Error fetching documents for {scheme_name}: {e}")
+        logger.exception(f"Error fetching documents for {scheme_name}")
         return []
     finally:
         if conn:
             conn.close()
 
+# --- Remove old file-based state management functions (if present) ---
+# (No-op if not present)
+
+def get_user_state(session_id: str) -> Dict[str, Any]:
+    """
+    Retrieves the user's session state from the sessions.db database.
+
+    Args:
+        session_id (str): The WhatsApp sender ID.
+
+    Returns:
+        dict: The user's session state as a dictionary. If not found, returns the default starting state.
+    """
+    default_state = {'step': 'START', 'profile': {}, 'lang': 'en'}
+    try:
+        conn = sqlite3.connect('sessions.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_state FROM user_sessions WHERE session_id = ?", (session_id,))
+        row = cursor.fetchone()
+        if row:
+            try:
+                state = json.loads(row['user_state'])
+                return state
+            except json.JSONDecodeError as e:
+                logger.exception(f"Error decoding JSON for session {session_id}")
+                return default_state
+        else:
+            return default_state
+    except sqlite3.Error as e:
+        logger.exception(f"Database error in get_user_state for {session_id}")
+        return default_state
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+def save_user_state(session_id: str, state_data: Dict[str, Any]) -> bool:
+    """
+    Saves the user's session state to the sessions.db database.
+
+    Args:
+        session_id (str): The WhatsApp sender ID.
+        state_data (dict): The user's session state to save.
+
+    Returns:
+        bool: True if the operation was successful, False otherwise.
+    """
+    try:
+        conn = sqlite3.connect('sessions.db')
+        cursor = conn.cursor()
+        state_json = json.dumps(state_data, ensure_ascii=False)
+        cursor.execute(
+            "INSERT OR REPLACE INTO user_sessions (session_id, user_state, last_updated) VALUES (?, ?, CURRENT_TIMESTAMP)",
+            (session_id, state_json)
+        )
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        logger.exception(f"Database error in save_user_state for {session_id}")
+        return False
+    except (TypeError, ValueError) as e:
+        logger.exception(f"Error serializing state_data for {session_id}")
+        return False
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 # --- END OF NEW, CLEANED-UP utils.py ---

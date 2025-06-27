@@ -1,0 +1,10 @@
+{
+    "whatsapp:+15132087448": {
+        "step": "START"
+    },
+    "whatsapp: 1234567890": {
+        "step": "START",
+        "profile": {},
+        "lang": "en"
+    }
+}

@@ -9,54 +9,71 @@ import threading
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
+from twilio.request_validator import RequestValidator
 from dotenv import load_dotenv
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # --- Load environment variables first ---
 load_dotenv()
 
+# --- Import centralized logging configuration ---
+from logging_config import get_logger
+
 # --- Import your own modules ---
 from nlu import extract_profile_from_text
 from utils import profile_summary_te, profile_summary_en, match_schemes, get_scheme_details_by_name, get_required_documents
+# --- Import new session management ---
+from session_manager import get_user_state, save_user_state, clear_user_state
 
 # --- Create Flask app ---
 app = Flask(__name__)
 
+# --- Get logger for this module ---
+logger = get_logger(__name__)
+
+# --- RATE LIMITING CONFIGURATION ---
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
+# --- RATE LIMIT ERROR HANDLER ---
+@app.errorhandler(429)  # Too Many Requests
+def ratelimit_handler(e):
+    """Handle rate limit exceeded errors with a proper TwiML response."""
+    logger.warning(f"Rate limit exceeded for IP: {get_remote_address()}")
+    response = MessagingResponse()
+    response.message(
+        "Rate limit exceeded. Please wait a moment before sending another message. "
+        "You can send up to 20 messages per minute."
+    )
+    return str(response), 429
+
 # --- ROBUST LOGGING AND CLIENT SETUP ---
-app.logger.setLevel(logging.INFO)
-app.logger.info("Flask app logger configured.")
+logger.info("Flask app logger configured.")
+logger.info("Rate limiting configured with 20 requests per minute per IP.")
 
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 
+# --- Twilio Template SIDs ---
+TWILIO_TEMPLATE_SID_EN_CONFIRM = os.environ.get('TWILIO_TEMPLATE_SID_EN_CONFIRM')
+TWILIO_TEMPLATE_SID_TE_CONFIRM = os.environ.get('TWILIO_TEMPLATE_SID_TE_CONFIRM')
+TWILIO_TEMPLATE_SID_TE_SCHEME_DETAILS = os.environ.get('TWILIO_TEMPLATE_SID_TE_SCHEME_DETAILS')
+TWILIO_TEMPLATE_SID_EN_SCHEME_DETAILS = os.environ.get('TWILIO_TEMPLATE_SID_EN_SCHEME_DETAILS')
+
 try:
     twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-    app.logger.info("Twilio client initialized successfully.")
+    # Initialize Twilio request validator for signature verification
+    validator = RequestValidator(TWILIO_AUTH_TOKEN)
+    logger.info("Twilio client and request validator initialized successfully.")
 except Exception as e:
-    app.logger.error(f"Could not initialize Twilio client: {e}")
+    logger.exception("Could not initialize Twilio client")
     twilio_client = None
-
-# --- FILE-BASED STATE MANAGEMENT ---
-STATE_FILE_PATH = 'user_states.json'
-
-def get_user_state(sender_id):
-    try:
-        with open(STATE_FILE_PATH, 'r') as f:
-            all_states = json.load(f)
-        state = all_states.get(sender_id, {'step': 'START', 'profile': {}, 'lang': 'en'})
-        return state
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {'step': 'START', 'profile': {}, 'lang': 'en'}
-
-def save_user_state(sender_id, state):
-    try:
-        with open(STATE_FILE_PATH, 'r') as f:
-            all_states = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        all_states = {}
-    all_states[sender_id] = state
-    with open(STATE_FILE_PATH, 'w') as f:
-        json.dump(all_states, f, indent=4)
-    app.logger.info(f"Saved state to file for {sender_id}: {state}")
+    validator = None
 
 # --- Voice Transcription ---
 def transcribe_voice_message(media_url):
@@ -72,10 +89,10 @@ def transcribe_voice_message(media_url):
             response = requests.post(WHISPER_REMOTE_URL, files=files)
             response.raise_for_status()
             transcription = response.json().get("text", "").strip()
-            app.logger.info(f"Whisper transcription successful: '{transcription}'")
+            logger.info(f"Whisper transcription successful: '{transcription}'")
             return transcription
     except Exception as e:
-        app.logger.error(f"An error occurred during transcription: {e}")
+        logger.exception("An error occurred during transcription")
         return None
     finally:
         if 'temp_filename' in locals() and os.path.exists(temp_filename):
@@ -83,18 +100,18 @@ def transcribe_voice_message(media_url):
 
 # --- Background Worker Functions ---
 def process_voice_message_in_background(sender_id, media_url, twilio_number):
-    app.logger.info(f"BACKGROUND (VOICE): Starting processing for {sender_id}")
+    logger.info(f"BACKGROUND (VOICE): Starting processing for {sender_id}")
     transcribed_text = transcribe_voice_message(media_url)
     if not transcribed_text:
-        app.logger.error("BACKGROUND (VOICE): Transcription failed.")
+        logger.error("BACKGROUND (VOICE): Transcription failed.")
         return
     process_text_in_background(sender_id, transcribed_text, twilio_number)
 
 def process_text_in_background(sender_id, text, twilio_number):
-    app.logger.info(f"BACKGROUND (TEXT): Starting NLU extraction for {sender_id}")
+    logger.info(f"BACKGROUND (TEXT): Starting NLU extraction for {sender_id}")
     extracted_profile = extract_profile_from_text(text)
     if not extracted_profile:
-        app.logger.error("BACKGROUND (TEXT): NLU extraction failed.")
+        logger.error("BACKGROUND (TEXT): NLU extraction failed.")
         if twilio_client:
             twilio_client.messages.create(from_=twilio_number, to=sender_id, body="Sorry, I could not understand the details.")
         return
@@ -108,10 +125,10 @@ def process_text_in_background(sender_id, text, twilio_number):
     # --- THIS IS THE CRITICAL FIX #1: BILINGUAL CONFIRMATION ---
     if lang == 'english':
         summary = profile_summary_en(extracted_profile)
-        template_sid = 'HX7ea145f0ff0e33497cc806c13465ab53' # <-- PASTE YOUR ENGLISH confirmation_prompt_en SID HERE
+        template_sid = TWILIO_TEMPLATE_SID_EN_CONFIRM
     else:
         summary = profile_summary_te(extracted_profile)
-        template_sid = 'HXf2e608cad900ad3a51c291f3f7bd5ed3' # <-- PASTE YOUR TELUGU confirmation_prompt SID HERE
+        template_sid = TWILIO_TEMPLATE_SID_TE_CONFIRM
 
     if twilio_client:
         try:
@@ -120,21 +137,47 @@ def process_text_in_background(sender_id, text, twilio_number):
                 content_sid=template_sid,
                 content_variables=json.dumps({'1': summary})
             )
-            app.logger.info(f"Successfully sent confirmation template {template_sid} to user.")
+            logger.info(f"Successfully sent confirmation template {template_sid} to user.")
         except Exception as e:
-            app.logger.error(f"Failed to send template message: {e}")
-    app.logger.info(f"BACKGROUND: Processing complete for {sender_id}")
+            logger.exception("Failed to send template message")
+    logger.info(f"BACKGROUND: Processing complete for {sender_id}")
 
 # ==============================================================================
 # =================== THE COMPLETE WHATSAPP WEBHOOK LOGIC ======================
 # ==============================================================================
 
 @app.route('/whatsapp', methods=['POST'])
+@limiter.limit("20 per minute")
 def whatsapp_webhook():
+    """
+    WhatsApp webhook endpoint with Twilio signature validation for security.
+    """
+    # --- CRITICAL SECURITY: TWILIO SIGNATURE VALIDATION ---
+    if validator is None:
+        logger.error("Twilio validator not initialized. Rejecting request for security.")
+        return "Forbidden", 403
+    
+    signature = request.headers.get('X-Twilio-Signature')
+    if not signature:
+        logger.warning("Missing X-Twilio-Signature header. Rejecting request.")
+        return "Forbidden", 403
+    try:
+        # Flask's request.form is a MultiDict, which is what Twilio expects
+        url = request.url
+        post_vars = request.form  # Use request.form directly, not converted to dict
+        is_valid = validator.validate(url, post_vars, signature)
+        if not is_valid:
+            logger.warning(f"Invalid Twilio signature from IP: {request.remote_addr}")
+            return "Forbidden", 403
+        logger.info(f"Valid Twilio signature verified from IP: {request.remote_addr}")
+    except Exception as e:
+        logger.exception("Error validating Twilio signature")
+        return "Forbidden", 403
+
+    # --- PROCESS THE VALIDATED REQUEST ---
     form_data = request.form
     sender_id = form_data.get('From')
     user_state = get_user_state(sender_id)
-    
     is_voice_message = 'MediaUrl0' in form_data
     processed_text = form_data.get('Body', '').strip()
 
@@ -231,9 +274,9 @@ def whatsapp_webhook():
                     lang = user_state.get('lang', 'en')
                     
                     if lang == 'te':
-                        template_sid = 'HX3aa812e9a328c31b624d094057dc48bf' # <-- PASTE YOUR TELUGU scheme_details_prompt_te SID
+                        template_sid = TWILIO_TEMPLATE_SID_TE_SCHEME_DETAILS
                     else:
-                        template_sid = 'HXe4931fa72034b2c9a711e2ddaf9f1e25' # <-- PASTE YOUR ENGLISH scheme_details_prompt_en SID
+                        template_sid = TWILIO_TEMPLATE_SID_EN_SCHEME_DETAILS
                     
                     if twilio_client:
                         twilio_client.messages.create(

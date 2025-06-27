@@ -20,6 +20,9 @@ __pycache__/
 # Database (if you don't want to version control it)
 *.db
 
+# Archive files
+archieve_old_files/
+
 # --- START OF COMPLETE .gitignore ---
 
 # Audio files
