@@ -1,104 +1,112 @@
-# WhatsApp Telugu Chatbot Backend
+# 🛡️ Safesound LLC – Welfare Schemes AI Assistant
 
-A prototype backend for a WhatsApp chatbot that supports Telugu and English, parses user responses (including numbers, gender, caste, etc.), and interacts with users via Twilio and Flask. Designed for modularity, robustness, and easy extension.
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)]()
 
----
-
-## Features
-- **Voice and Text Input:** Supports both text and voice messages using Whisper.
-- **Accurate Telugu Number Parsing:** Handles complex Telugu numerals and digit fallback.
-- **Robust Input Filtering:** Accepts valid short answers (e.g., "మగ", "ఆడ", "yes", "no", caste codes) and filters out garbage/irrelevant input.
-- **State Machine Dialogue:** Guides users through age, gender, occupation, income, and more.
-- **Centralized Utilities:** All parsing and extraction helpers live in `utils.py` for easy maintenance.
-- **Comprehensive Logging:** Key events and errors are logged for debugging.
+A **voice-first WhatsApp assistant**, initially serving Telugu and English speakers to discover government welfare schemes. Powered by AI/NLU, it converts a single voice or text message into a personalized profile, matches it to relevant programs, and delivers guidance. Our vision: to one day support **any language and context globally** and operate seamlessly on a **modular smartphone platform**.
 
 ---
 
-## Logging
+## 🧭 Vision & Roadmap
 
-The project uses a centralized logging system configured in `logging_config.py` that provides structured, production-ready logging across all modules. All `print()` statements have been replaced with appropriate logging calls that include:
-
-- **Structured Format:** `timestamp - module - level - message`
-- **Multiple Log Levels:** INFO, WARNING, ERROR, EXCEPTION
-- **Automatic Stack Traces:** Full exception details for debugging
-- **Configurable Output:** Console and file logging support
-- **Module Identification:** Clear source identification in logs
-
-Example log output:
-```
-2025-06-27 15:08:05,259 - app - INFO - Flask app logger configured.
-2025-06-27 15:08:05,259 - app - INFO - Twilio client initialized successfully.
-2025-06-27 15:08:05,259 - nlu - INFO - Sending text to Gemini for NLU extraction.
-```
+1. **Phase 1:** Launch on WhatsApp for Telugu + English.
+2. **Phase 2:** Improve AI‑powered understanding (NLU).
+3. **Phase 3:** Future hardware support: build a **modular phone** with the assistant pre-installed.
+4. **Phase 4:** Expand to **universal, language-agnostic voice assistant** for civic services worldwide.
 
 ---
 
-## Setup
-1. **Clone the Repo:**
-   ```bash
-   git clone <your-repo-url>
-   cd whatsapp_chatbot_backend
-   ```
-2. **Create & Activate a Virtual Environment:**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-3. **Install Requirements:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. **Configure Environment:**
-   - Copy `.env.example` to `.env` and fill in your Twilio and DB credentials:
-     - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `DB_FILE`, etc.
+## 🚀 Features
+
+- **Voice + Text Input** – via WhatsApp using Whisper for Telugu and English.
+- **AI‑Powered NLU** – extracts structured user data: age, income, intent, gender, caste, etc.
+- **Intelligent Matching** – selects relevant welfare schemes from a verified database.
+- **Seamless Workflow** – sends document requirements and next steps via WhatsApp.
 
 ---
 
-## Running the App
+## 🛠️ Tech Stack
+
+| Component            | Technology                    |
+|----------------------|-------------------------------|
+| Backend              | Python 3.10+, Flask           |
+| NLU & Embeddings     | OpenAI/Google Gemini/Fine‑tuned Whisper |
+| Vector Search        | LangChain + pgvector          |
+| Messaging            | Twilio WhatsApp API           |
+| Database             | SQLite / JSON session store   |
+| Logging & Testing    | `logging_config.py`, `pytest` |
+
+---
+
+## ⚡ Quick Start
+
 ```bash
+git clone https://github.com/your-org/safesound-assistant.git
+cd safesound-assistant
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+# Add your TWILIO_* and GEMINI_API_KEY
 python app.py
-```
-- The Flask server will start. Use ngrok or similar for public webhook access.
+````
 
----
+Use ngrok to expose your bot and update your Twilio webhook accordingly:
 
-## Project Structure
-```
-whatsapp_chatbot_backend/
-├── app.py                  # Main Flask app and webhook
-├── utils.py                # Parsing, extraction, and helper functions
-├── nlu.py                  # Natural language understanding with Google Gemini
-├── logging_config.py       # Centralized logging configuration
-├── session_manager.py      # Database-backed session management
-├── requirements.txt        # Python dependencies (generated from requirements.in)
-├── requirements.in         # Direct dependencies for pip-tools
-├── tests/                  # Comprehensive test suite
-├── .env                    # Environment variables (not committed)
-└── README.md               # This file
+```bash
+ngrok http 5000
 ```
 
 ---
 
-## Key Design Principles
-- **Modular:** Helpers are in `utils.py` and reusable.
-- **Type-Safe:** Type hints and docstrings throughout.
-- **Robust:** Handles edge cases and logs errors clearly.
-- **Extensible:** Easy to add new states, languages, or parsing logic.
-- **Secure:** Twilio signature validation and environment-based configuration.
-- **Tested:** Comprehensive test coverage with mocked external dependencies.
+## 📁 Project Layout
+
+```
+safesound/
+├── app.py             # Webhook + dialog flow
+├── nlu.py             # NLU & schema extraction
+├── utils.py           # Telugu-parsers, number handling
+├── logging_config.py  # Structured logging
+├── session_manager.py # Tracks user conversations
+├── welfare_schemes.db # Sample scheme database
+├── user_states.json   # Persistent session storage
+├── requirements.txt   # Installed dependencies
+├── .env.example       # Env vars template
+└── README.md          # This file
+```
 
 ---
 
-## Contributing
-- PRs and issues welcome! Please add tests for new features.
+## 🎯 Principles & Best Practices
+
+* **Minimal & Modular**: Logic split into clear, single-responsibility modules.
+* **Type-safe & Tested**: Type hints across codebase + unit tests.
+* **Localisation-first**: Built for Telugu-English; designed to scale across languages.
+* **Security-minded**: Validates Twilio webhook signatures, secures keys with `.env`.
+* **Extensible**: Easy to plug in new states, languages, or hardware platform.
 
 ---
 
-## License
-MIT License
+## 🧬 Future Expansion
+
+* Improve **NLU accuracy** using Gemini or fine-tuned models.
+* Add **language detection** for seamless user experience.
+* Build on **modular phone prototype** once NLU scales.
+* Scale pilot with nonprofits and AP state government; then expand globally.
 
 ---
 
-## Credits
-- Built with [Flask](https://flask.palletsprojects.com/), [Twilio](https://www.twilio.com/), [transformers](https://huggingface.co/docs/transformers/index), and [torch](https://pytorch.org/).
-- Telugu NLP logic inspired by open-source projects and community contributions.
+## 🤝 Contributing & Contact
+
+We welcome contributions—whether through code, documentation, or issue reports. Please open an issue or submit a PR, and include tests for new features.
+
+**Founder & Engineer:**
+Prudvish Korrapati — Prudvish@safesound.ai
+
+---
+
+## 📄 License
+
+This project is released under the **MIT License**. Check [LICENSE] for details.
+
+
