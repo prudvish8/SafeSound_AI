@@ -107,6 +107,6 @@ Prudvish Korrapati — Prudvish@safesound.ai
 
 ## 📄 License
 
-This project is released under the **MIT License**. Check [LICENSE] for details.
+This project is released under the **MIT License**.
 
 
